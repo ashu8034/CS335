@@ -1,0 +1,1002 @@
+%{
+  /* This is the prologue section. This code goes
+  on the top of the parser implementation file. */
+  #include <iostream>
+  #include <vector>
+  #include <cstring>
+  #include <sstream>
+  #include <typeinfo>
+  #include <fstream>
+  using namespace std;
+ long long int curr_id = 0;
+
+  struct Node{
+    string s;
+	int flag=0;
+	int i;
+	float f;
+    vector <Node* > child;
+	long long int id = 0;
+  };
+
+  struct Node* root=NULL;
+  
+  struct Node* fterminal_child(string pstr,string cstr){
+    struct Node* c= new Node;
+	curr_id++;
+	c->id = curr_id;
+	c->flag=1;
+    c->s=cstr;
+    struct Node* p=new Node;
+	curr_id++;
+	p->id = curr_id;
+    p->s= pstr;
+    p->child.push_back(c);
+	return p;
+}
+
+void print_dot_of_node(Node*p, string filename)
+  {
+    std::ofstream output;
+    output.open(filename, std::ios_base::app);
+    output << p->id << "[label=\"" << p->s << "\"];" << endl;
+    int i;
+    for(i=0; i<p->child.size(); i++)
+    {
+      struct Node* f=p->child[i];
+      while(f->child.size()==1){
+        f=f->child[0];
+      }
+      output << p->id << " -> " << f->id <<";" << endl;
+      print_dot_of_node(f, filename);
+    }
+  } 
+
+void print_graph_in_dot(Node*p, string filename)
+  {
+    std::ofstream output;
+    output.open(filename, std::ios_base::app);
+    output << "Digraph G{" <<endl;
+    print_dot_of_node(p, filename);
+    output<<"}";
+  }
+
+void terminal_child(Node* p,string pstr,string cstr){
+    struct Node* c= new Node;
+	curr_id++;
+	c->id = curr_id;
+	c->flag=1;
+    c->s=cstr;
+    p->child.push_back(c);
+}
+
+  struct Node* fterminal_child_int(string pstr,int cstr){
+    struct Node* c= new Node;
+	curr_id++;
+	c->id = curr_id;
+    c->i=cstr;
+	c->flag=2;
+    struct Node* p=new Node;
+	curr_id++;
+	p->id = curr_id;
+    p->s= pstr;
+	p->child.push_back(c);
+	return p;
+  }
+
+   void terminal_child_int(Node* p,string pstr,int cstr){
+    struct Node* c= new Node;
+	curr_id++;
+	c->id = curr_id;
+    c->i=cstr;
+	c->flag=2;
+    p->child.push_back(c);
+  }
+
+  struct Node* fterminal_child_float(string pstr,float cstr){
+    struct Node* c= new Node;
+	curr_id++;
+	c->id = curr_id;
+    c->f=cstr;
+	c->flag=3;
+	struct Node* p=new Node;
+	curr_id++;
+	p->id = curr_id;
+    p->s= pstr;
+	p->child.push_back(c);
+	return p;
+  }
+
+  void terminal_child_float(Node* p,string pstr,float cstr){
+    struct Node* c= new Node;
+	curr_id++;
+	c->id = curr_id;
+    c->f=cstr;
+	c->flag=3;
+	p->child.push_back(c);
+  }
+  
+  struct Node* fnon_terminalchild(string pstr, Node*c){
+    struct Node* p=new Node;
+	curr_id++;
+	p->id = curr_id;
+    p->s= pstr;
+	p->flag=1;
+    p->child.push_back(c);
+	return p;
+  }
+
+  void non_terminalchild(Node*p,string pstr, Node*c){
+	p->flag=1;
+	p->child.push_back(c);
+  }
+
+  struct Node* nonopnon(string pstr,string op, Node* fir, Node* sec){
+    struct Node* p=new Node;
+	curr_id++;
+	p->id = curr_id;
+    p->s=pstr;
+    struct Node* o=new Node;
+    o->s=op;
+	curr_id++;
+	o->id = curr_id;
+    p->child.push_back(o);
+    o->child.push_back(fir);
+    o->child.push_back(sec);
+	return p;
+	}
+
+  extern void yyerror(char const * message);
+  extern int yyparse(void);
+  extern int yylex(void);
+  extern int yylineno;
+%}
+
+
+ %union{
+  struct Node* node;
+  char* str;
+  int ival;
+  float fval; 
+}
+/* Declarations of terminals */
+
+ %type <str> identifier abstract NewLine  assert   boolean   break1   byte1   case1   catch1   char1   class1   const1   underscore   continue1   default1   do1   double1   else1   enum1   extends   final   finally   float1   for1   if1   goto1   implements   import   instanceof   int1   interface   long1   native   new1   package   private1   protected1   public1   return1   static1   strictfp   short1   super   switch1   synchronised   this1   throw1   throws   transient   try1   void1   volatile1   while1 exports   module1   NonSealed   open   opens   permits   provides   record   requires1   sealed   to   transitive   uses   var   with  yield comma semicolon period open_bracket closed_bracket open_square_bracket closed_square_bracket dots_three at colon_colon open_flower_bracket closed_flower_bracket equal1 diamond gthan lthan exclamatory notk qmark colon implies equal_equal g_equal l_equal exclamatory_equal and_and or1 increment decrement plus_1 minus_1 multiply divide band bor power percentage llthan ggthan gggthan plus_equal minus_equal multiply_equal divide_equal bitor_equal bitand_equal power_equal percentage_equal ll_equal gg_equal ggg_equal charlit string1 textblock NullLiteral BooleanLiteral 
+ %type <ival> decint octint hexint binint 
+ %type <fval> hexfloat1 decfloat
+ %type <node> Identifier Literal Type PrimitiveType NumericType IntegralType FloatingPointType ReferenceType ArrayType Name QualifiedName CompilationUnit PackageDeclarationopt ImportDeclarationsopt TypeDeclarationsopt ImportDeclarations TypeDeclarations PackageDeclaration ImportDeclaration SingleTypeImportDeclaration 
+ %type <node> TypeImportOnDemandDeclaration TypeDeclaration Modifiers Modifier ClassDeclaration Modifiersopt Superopt Interfacesopt Super Interfaces InterfaceTypeList ClassBody ClassBodyDeclarationsopt ClassBodyDeclarations ClassBodyDeclaration ClassMemberDeclaration FieldDeclaration
+ %type <node> VariableDeclarators VariableDeclarator VariableDeclaratorId VariableInitializer MethodDeclaration MethodHeader Throwsopt MethodDeclarator FormalParameterList FormalParameterListopt FormalParameter Throws ClassTypeList MethodBody StaticInitializer ConstructorDeclaration ConstructorDeclarator 
+ %type <node> ConstructorBody BlockStatementsopt ExplicitConstructorInvocationopt ExplicitConstructorInvocation ArgumentListopt InterfaceDeclaration ExtendsInterfacesopt ExtendsInterfaces InterfaceBody InterfaceMemberDeclarationsopt InterfaceMemberDeclarations InterfaceMemberDeclaration AbstractMethodDeclaration 
+ %type <node> ArrayInitializer commaopt VariableInitializersopt VariableInitializers Block BlockStatements BlockStatement LocalVariableDeclarationStatement LocalVariableDeclaration Statement StatementExpression StatementNoShortIf StatementWithoutTrailingSubstatement EmptyStatement LabeledStatement LabeledStatementNoShortIf ExpressionStatement 
+ %type <node> IfThenStatement IfThenElseStatement IfThenElseStatementNoShortIf SwitchStatement SwitchBlock SwitchBlockStatementGroupsopt SwitchLabelsopt SwitchBlockStatementGroups SwitchBlockStatementGroup SwitchLabels SwitchLabel WhileStatement WhileStatementNoShortIf DoStatement ForStatement ForStatementNoShortIf ForInitopt Expressionopt ForUpdateopt
+ %type <node> ForInit ForUpdate StatementExpressionList BreakStatement ContinueStatement Identifieropt ReturnStatement ThrowStatement SynchronizedStatement TryStatement Catchesopt Catches CatchClause Finally Primary PrimaryNoNewArray ClassInstanceCreationExpression ArgumentList ArrayCreationExpression Dimsopt DimExprs DimExpr Dims FieldAccess MethodInvocation
+ %type <node> ArrayAccess PostfixExpression PostIncrementExpression PostDecrementExpression UnaryExpression PreIncrementExpression PreDecrementExpression UnaryExpressionNotPlusMinus CastExpression MultiplicativeExpression AdditiveExpression ShiftExpression RelationalExpression EqualityExpression AndExpression ExclusiveOrExpression InclusiveOrExpression ConditionalAndExpression 
+ %type <node> ConditionalOrExpression AssignmentExpression Assignment LeftHandSide AssignmentOperator
+
+
+
+%token identifier NewLine abstract   assert   boolean   break1   byte1   case1   catch1   char1   class1   const1   underscore   continue1   default1   do1   double1   else1   enum1   extends   final   finally   float1   for1   if1   goto1   implements   import   instanceof   int1   interface   long1   native   new1   package   private1   protected1   public1   return1   static1   strictfp   short1   super   switch1   synchronised   this1   throw1   throws   transient   try1   void1   volatile1   while1 exports   module1   NonSealed   open   opens   permits   provides   record   requires1   sealed   to   transitive   uses   var   with  yield decint octint hexint binint hexfloat1 decfloat BooleanLiteral charlit string1 textblock NullLiteral comma semicolon period open_bracket closed_bracket open_square_bracket closed_square_bracket dots_three at colon_colon open_flower_bracket closed_flower_bracket equal1 diamond gthan lthan exclamatory notk qmark colon implies equal_equal g_equal l_equal exclamatory_equal and_and or1 increment decrement plus_1 minus_1 multiply divide band bor power percentage llthan ggthan gggthan plus_equal minus_equal multiply_equal divide_equal bitor_equal bitand_equal power_equal percentage_equal ll_equal gg_equal ggg_equal;
+
+%start CompilationUnit
+
+%%
+Identifier: identifier{$$=fterminal_child("Identifier",$1);};
+
+Literal: decint {$$=fterminal_child_int("Literal",$1);}
+| octint{$$=fterminal_child_int("Literal",$1);}
+| binint {$$=fterminal_child_int("Literal",$1);}
+| hexint {$$=fterminal_child_int("Literal",$1);}
+| hexfloat1 {$$=fterminal_child_float("Literal",$1);}
+| decfloat {$$=fterminal_child_float("Literal",$1);}
+| BooleanLiteral {$$=fterminal_child("Literal",$1);}
+| charlit {$$=fterminal_child("Literal",$1);}
+| string1 {string p=$1;p.erase(0,1);p.erase(p.size()-1,1);$$=fterminal_child("Literal",p);}
+| textblock {$$=fterminal_child("Literal",$1);}
+| NullLiteral {$$=fterminal_child("Literal",$1);};
+
+Type:PrimitiveType{$$=fnon_terminalchild("Type",$1);}|
+
+    ReferenceType{$$=fnon_terminalchild("Type",$1);};
+
+PrimitiveType:
+
+	NumericType{$$=fnon_terminalchild("PrimitiveType",$1);}|
+
+	boolean{$$=fterminal_child("PrimitiveType",$1);};
+
+NumericType:
+
+	IntegralType{$$=fnon_terminalchild("NumericType",$1);}|
+
+	FloatingPointType{$$=fnon_terminalchild("NumericType",$1);};
+
+IntegralType:
+
+	byte1{$$=fterminal_child("IntegralType",$1);}
+     | short1 {$$=fterminal_child("IntegralType",$1);}
+     | int1 {$$=fterminal_child("IntegralType",$1);}
+     | long1 {$$=fterminal_child("IntegralType",$1);} |
+      char1{$$=fterminal_child("IntegralType",$1);};
+
+FloatingPointType: 
+
+	float1 {$$=fterminal_child("FloatingPointType",$1);}|double1{$$=fterminal_child("FloatingPointType",$1);};
+
+ReferenceType:
+
+	Name {$$=fnon_terminalchild("ReferenceType",$1);}|
+
+	ArrayType{$$=fnon_terminalchild("ReferenceType",$1);};
+
+ArrayType:
+
+	PrimitiveType open_square_bracket closed_square_bracket{$$=fnon_terminalchild("ArrayType",$1);terminal_child($$,"ArrayType",$2);terminal_child($$,"ArrayType",$3);}|
+
+	Name open_square_bracket closed_square_bracket{$$=fnon_terminalchild("ArrayType",$1);terminal_child($$,"ArrayType",$2);terminal_child($$,"ArrayType",$3);}|
+
+	ArrayType open_square_bracket closed_square_bracket{$$=fnon_terminalchild("ArrayType",$1);terminal_child($$,"ArrayType",$2);terminal_child($$,"ArrayType",$3);};
+
+Name:
+
+	Identifier{$$=fnon_terminalchild("Name",$1);}|
+
+	QualifiedName{$$=fnon_terminalchild("Name",$1);};
+
+QualifiedName:
+
+	Name period Identifier{$$=nonopnon("QualifiedName",$2,$1,$3); };
+
+CompilationUnit:
+
+	PackageDeclarationopt ImportDeclarationsopt TypeDeclarationsopt{$$=fnon_terminalchild("CompilationUnit",$1);non_terminalchild($$,"CompilationUnit",$2);non_terminalchild($$,"CompilationUnit",$3);root=$$;};
+
+PackageDeclarationopt: {$$=fterminal_child("PackageDeclarationopt","");}| PackageDeclaration{$$=fnon_terminalchild("PackageDeclarationopt",$1);root=$$;};
+ImportDeclarationsopt: {$$=fterminal_child("ImportDeclarationopt","");}| ImportDeclarations{$$=fnon_terminalchild("ImportDeclarationopt",$1);};
+TypeDeclarationsopt: {$$=fterminal_child("TypeDeclarationopt","");}| TypeDeclarations{$$=fnon_terminalchild("TypeDeclarationopt",$1);};
+
+ImportDeclarations:
+
+	ImportDeclaration{$$=fnon_terminalchild("ImportDeclarations",$1);}|
+
+	ImportDeclarations ImportDeclaration{$$=fnon_terminalchild("ImportDeclarations",$1);non_terminalchild($$,"ImportDeclarations",$2);};
+
+TypeDeclarations:
+
+	TypeDeclaration{$$=fnon_terminalchild("TypeDeclarations",$1);}|
+
+	TypeDeclarations TypeDeclaration{$$=fnon_terminalchild("TypeDeclarations",$1);non_terminalchild($$,"TypeDeclarations",$2);};
+
+PackageDeclaration:
+
+	package Name{$$=fterminal_child("PackageDeclaration",$1);non_terminalchild($$,"PackageDeclaration",$2);};
+
+ImportDeclaration:
+
+	SingleTypeImportDeclaration{$$=fnon_terminalchild("ImportDeclaration",$1);}|
+
+	TypeImportOnDemandDeclaration{$$=fnon_terminalchild("ImportDeclaration",$1);};
+
+SingleTypeImportDeclaration:
+
+	import Name semicolon{$$=fterminal_child("SingleTypeImportDeclaration",$1);non_terminalchild($$,"SingleTypeImportDeclaration",$2);terminal_child($$,"SingleTypeImportDeclaration",$3);};
+
+TypeImportOnDemandDeclaration:
+
+	import Name period multiply semicolon{$$=fterminal_child("TypeImportOnDemandDeclaration",$1);non_terminalchild($$,"TypeImportOnDemandDeclaration",$2);terminal_child($$,"TypeImportOnDemandDeclaration",$3);terminal_child($$,"TypeImportOnDemandDeclaration",$4);terminal_child($$,"TypeImportOnDemandDeclaration",$5);};
+
+TypeDeclaration:
+
+	ClassDeclaration{$$=fnon_terminalchild("TypeDeclaration",$1);}|
+
+	InterfaceDeclaration{$$=fnon_terminalchild("TypeDeclaration",$1);}|
+
+	semicolon{$$=fterminal_child("TypeDeclaration",$1);};
+
+Modifiers:
+
+	Modifier{$$=fnon_terminalchild("Modifiers",$1);}|
+
+	Modifiers Modifier{$$=fnon_terminalchild("Modifiers",$1);non_terminalchild($$,"Modifiers",$2);};
+
+Modifier:
+
+	public1{$$=fterminal_child("Modifier",$1);} |protected1{$$=fterminal_child("Modifier",$1);}| private1{$$=fterminal_child("Modifier",$1);}|
+
+	static1{$$=fterminal_child("Modifier",$1);}|
+
+	abstract{$$=fterminal_child("Modifier",$1);}| final{$$=fterminal_child("Modifier",$1);}| native{$$=fterminal_child("Modifier",$1);} | synchronised{$$=fterminal_child("Modifier",$1);}| transient{$$=fterminal_child("Modifier",$1);}| volatile1{$$=fterminal_child("Modifier",$1);};
+
+ClassDeclaration:
+
+	Modifiersopt class1 Identifier Superopt Interfacesopt ClassBody{$$=fnon_terminalchild("ClassDeclaration",$1);terminal_child($$,"ClassDeclaration",$2);non_terminalchild($$,"ClassDeclaration",$3);non_terminalchild($$,"ClassDeclaration",$4);non_terminalchild($$,"ClassDeclaration",$5);non_terminalchild($$,"ClassDeclaration",$6);};
+
+Modifiersopt: {$$=fterminal_child("Modifiersopt","");}| Modifiers{$$=fnon_terminalchild("Modifiersopt",$1);};
+Superopt: {$$=fterminal_child("Superopt","");}| Super{$$=fnon_terminalchild("Superopt",$1);};
+Interfacesopt: {$$=fterminal_child("Interfacesopt","");}| Interfaces{$$=fnon_terminalchild("Interfaceopt",$1);};
+
+Super:
+
+	extends Name{$$=fterminal_child("Super",$1);non_terminalchild($$,"Super",$2);};
+
+Interfaces:
+
+	implements InterfaceTypeList{$$=fterminal_child("Interfaces",$1);non_terminalchild($$,"Interfaces",$2);};
+
+InterfaceTypeList:
+
+	Name{$$=fnon_terminalchild("InterfaceTypeList",$1);}|
+
+	InterfaceTypeList comma Name{$$=fnon_terminalchild("InterfaceTypeList",$1);terminal_child($$,"InterfaceTypeList",$2);non_terminalchild($$,"InterfaceTypeList",$3);};
+
+ClassBody:
+
+	open_flower_bracket ClassBodyDeclarationsopt closed_flower_bracket{$$=fterminal_child("ClassBody",$1);non_terminalchild($$,"ClassBody",$2);terminal_child($$,"ClassBody",$3);};
+
+ClassBodyDeclarationsopt: {$$=fterminal_child("ClassBodyDeclarationsopt","");} | ClassBodyDeclarations{$$=fnon_terminalchild("ClassBodydeclarationopt",$1);};
+
+ClassBodyDeclarations:
+
+	ClassBodyDeclaration{$$=fnon_terminalchild("ClassBodyDeclarations",$1);}|
+
+	ClassBodyDeclarations ClassBodyDeclaration{$$=fnon_terminalchild("ClassBodyDeclarations",$1);non_terminalchild($$,"ClassBodyDeclarations",$2);};
+
+ClassBodyDeclaration:
+
+	ClassMemberDeclaration{$$=fnon_terminalchild("ClassBodyDeclaration",$1);}|
+
+	StaticInitializer{$$=fnon_terminalchild("ClassBodyDeclaration",$1);}|
+
+	ConstructorDeclaration{$$=fnon_terminalchild("ClassBodyDeclaration",$1);};
+
+ClassMemberDeclaration:
+
+	FieldDeclaration{$$=fnon_terminalchild("ClassMemberDeclaration",$1);}|
+
+	MethodDeclaration{$$=fnon_terminalchild("ClassMemberDeclaration",$1);};
+
+FieldDeclaration:
+
+	Modifiersopt Type VariableDeclarators semicolon{$$=fnon_terminalchild("FieldDeclaration",$1);non_terminalchild($$,"FieldDeclaration",$2);non_terminalchild($$,"FieldDeclaration",$3);terminal_child($$,"FieldDeclaration",$4);};
+
+VariableDeclarators:
+
+	VariableDeclarator{$$=fnon_terminalchild("VariableDeclarators",$1);}|
+
+	VariableDeclarators comma VariableDeclarator{$$=fnon_terminalchild("VariableDeclarators",$1);terminal_child($$,"VariableDeclarators",$2);non_terminalchild($$,"VariableDeclarators",$3);};
+
+VariableDeclarator:
+
+	VariableDeclaratorId{$$=fnon_terminalchild("VariableDeclarator",$1);}|
+
+	VariableDeclaratorId equal1 VariableInitializer{$$=nonopnon( "VariableDeclarator",$2,$1,$3);};
+
+VariableDeclaratorId:
+
+	Identifier{$$=fnon_terminalchild("VariableDeclaratorId",$1);}|
+
+	VariableDeclaratorId open_square_bracket closed_square_bracket{$$=fnon_terminalchild("VariableDeclaratorId",$1);terminal_child($$,"VariableDeclaratorId",$2);terminal_child($$,"VariableDeclaratorId",$3);};
+
+VariableInitializer:
+
+	AssignmentExpression{$$=fnon_terminalchild("VariableInitializer",$1);}|
+
+	ArrayInitializer{$$=fnon_terminalchild("VariableInitializer",$1);};
+
+MethodDeclaration:
+
+	MethodHeader MethodBody{$$=fnon_terminalchild("MethodDeclaration",$1);non_terminalchild($$,"MethodDeclaration",$2);};
+
+MethodHeader:
+
+	Modifiersopt Type MethodDeclarator Throwsopt{$$=fnon_terminalchild("MethodHeader",$1); non_terminalchild($$,"MethodHeader",$2);non_terminalchild($$,"MethodHeader",$3);non_terminalchild($$,"MethodHeader",$4);}|
+
+	Modifiersopt void1 MethodDeclarator Throwsopt{$$=fnon_terminalchild("MethodHeader",$1); terminal_child($$,"MethodHeader",$2);non_terminalchild($$,"MethodHeader",$3);non_terminalchild($$,"MethodHeader",$4);};
+
+Throwsopt: {$$=fterminal_child("Throwsopt","");}| Throws{$$=fnon_terminalchild("Throwsopt",$1);};
+
+MethodDeclarator:
+
+	Identifier open_bracket FormalParameterListopt closed_bracket{$$=fnon_terminalchild("Methoddeclarator",$1);terminal_child($$,"MethodDeclarator",$2);non_terminalchild($$,"MethodDeclarator",$3);terminal_child($$,"MethodDeclarator",$4);}|
+
+	MethodDeclarator open_square_bracket closed_square_bracket{$$=fnon_terminalchild("MethodDeclarator",$1);terminal_child($$,"Methoddeclarator",$2);terminal_child($$,"MethodDeclarator",$3);};
+
+FormalParameterListopt: {$$=fterminal_child("FormalParameterListopt","");}| FormalParameterList{$$=fnon_terminalchild("FormalParameterListopt",$1);};
+
+FormalParameterList:
+
+	FormalParameter{$$=fnon_terminalchild("FormalParameterList",$1);}|
+
+	FormalParameterList comma FormalParameter{$$=fnon_terminalchild("FormalParameterList",$1);terminal_child($$,"FormalParameterList",$2);non_terminalchild($$,"FormalParameterList",$3);};
+
+FormalParameter:
+
+	Type VariableDeclaratorId{$$=fnon_terminalchild("FormalParameter",$1);non_terminalchild($$,"FormalParameter",$2);};
+
+Throws:
+
+	throws ClassTypeList{$$=fterminal_child("Throws",$1);non_terminalchild($$,"Throws",$2);};
+
+ClassTypeList:
+
+	Name{$$=fnon_terminalchild("ClassTypeList",$1);}|
+
+	ClassTypeList comma Name{$$=fnon_terminalchild("ClassTypeList",$1);terminal_child($$,"ClassTypeList",$2);non_terminalchild($$,"ClassTypeList",$3);};
+
+MethodBody:
+
+	Block{$$=fnon_terminalchild("MethodBody",$1);} |
+
+	semicolon{$$=fterminal_child("MethodBody",$1);};
+
+StaticInitializer:
+
+	static1 Block{$$=fterminal_child("StaticInitializer",$1);non_terminalchild($$,"StaticInitializer",$2);};
+
+ConstructorDeclaration:
+
+	Modifiersopt ConstructorDeclarator Throwsopt ConstructorBody{$$=fnon_terminalchild("ConstructorDeclaration",$1);non_terminalchild($$,"ConstructorDeclaration",$2);non_terminalchild($$,"ConstructorDeclaration",$3);non_terminalchild($$,"ConstructorDeclaration",$4);};
+
+ConstructorDeclarator:
+
+	Identifier open_bracket FormalParameterListopt closed_bracket{$$=fnon_terminalchild("ConstructorDeclarator",$1);terminal_child($$,"ConstructorDeclarator",$2);non_terminalchild($$,"ConstructorDeclarator",$3);terminal_child($$,"ConstructorDeclarator",$4);};
+
+ConstructorBody:
+
+	open_flower_bracket ExplicitConstructorInvocationopt BlockStatementsopt closed_flower_bracket{$$=fterminal_child("ConstructorBody",$1);non_terminalchild($$,"ConstructorBody",$2);non_terminalchild($$,"ConstructorBody",$3);terminal_child($$,"ConstructorBody",$4);};
+
+BlockStatementsopt: {$$=fterminal_child("BlockStatementsopt","");}| BlockStatements{$$=fnon_terminalchild("BlockStatementsopt",$1);};
+ExplicitConstructorInvocationopt: {$$=fterminal_child("ExplicitConstructorInvocationopt","");}| ExplicitConstructorInvocation{$$=fnon_terminalchild("ExplicitConstructorInvocationopt",$1);};
+
+ExplicitConstructorInvocation:
+
+	this1 open_bracket ArgumentListopt closed_bracket semicolon{$$=fterminal_child("ExplicitConstructorInvocation",$1);terminal_child($$,"ExplicitConstructorInvocation",$2);non_terminalchild($$,"ExplicitConstructorInvocation",$3);terminal_child($$,"ExplicitConstructorInvocation",$4);terminal_child($$,"ExplicitConstructorInvocation",$5);}|
+
+	super open_bracket ArgumentListopt closed_bracket semicolon{$$=fterminal_child("ExplicitConstructorInvocation",$1);terminal_child($$,"ExplicitConstructorInvocation",$2);non_terminalchild($$,"ExplicitConstructorInvocation",$3);terminal_child($$,"ExplicitConstructorInvocation",$4);terminal_child($$,"ExplicitConstructorInvocation",$5);};
+
+ArgumentListopt: {$$=fterminal_child("ArgumentListopt","");}| ArgumentList{$$=fnon_terminalchild("ArgumentListopt",$1);};
+
+InterfaceDeclaration:
+
+	Modifiersopt interface Identifier ExtendsInterfacesopt InterfaceBody{$$=fnon_terminalchild("InterfaceDeclaration",$1);terminal_child($$,"InterfaceDeclaration",$2);non_terminalchild($$,"InterfaceDeclaration",$3);non_terminalchild($$,"InterfaceDeclaration",$4);non_terminalchild($$,"InterfaceDeclaration",$5);};
+
+ExtendsInterfacesopt: {$$=fterminal_child("ExtendsInterfacesopt","");}|ExtendsInterfaces{$$=fnon_terminalchild("ExtendsInterfacesopt",$1);};
+
+ExtendsInterfaces:
+
+	extends Name{$$=fterminal_child("ExtendsInterfaces",$1);non_terminalchild($$,"ExtendsInterfaces",$2);}|
+
+	ExtendsInterfaces comma Name{$$=fnon_terminalchild("ExtendsInterfaces",$1);terminal_child($$,"ExtendsInterfaces",$2);non_terminalchild($$,"ExtendsInterfaces",$3);};
+
+InterfaceBody:
+
+	open_flower_bracket InterfaceMemberDeclarationsopt closed_flower_bracket{$$=fterminal_child("InterfaceBody",$1);non_terminalchild($$,"InterfaceBody",$2);terminal_child($$,"InterfaceBody",$3);};
+
+InterfaceMemberDeclarationsopt: {$$=fterminal_child("InterfaceMenberDeclarationsopt","");}| InterfaceMemberDeclarations{$$=fnon_terminalchild("InterfaceMemberDeclarationsopt",$1);};
+
+InterfaceMemberDeclarations:
+
+	InterfaceMemberDeclaration{$$=fnon_terminalchild("InterfaceMemberDeclarations",$1);}|
+
+	InterfaceMemberDeclarations InterfaceMemberDeclaration{$$=fnon_terminalchild("InterfaceMemberDeclarations",$1);non_terminalchild($$,"InterfaceMemberDeclarations",$2);};
+
+InterfaceMemberDeclaration:
+
+	FieldDeclaration{$$=fnon_terminalchild("InterfaceMemberDeclaration",$1);}|
+
+	AbstractMethodDeclaration{$$=fnon_terminalchild("InterfaceMemberDeclaration",$1);};
+
+AbstractMethodDeclaration:
+
+	MethodHeader semicolon{$$=fnon_terminalchild("AbstractMethodDeclaration",$1);terminal_child($$,"AbstractMethodDeclaration",$2);};
+
+ArrayInitializer:
+
+	open_flower_bracket VariableInitializersopt commaopt closed_flower_bracket{$$=fterminal_child("ArrayInitializer",$1);non_terminalchild($$,"ArrayInitializer",$2);non_terminalchild($$,"ArrayInitializer",$3);terminal_child($$,"ArrayInitializer",$4);};
+
+commaopt: {$$=fterminal_child("commaopt","");}| comma{$$=fterminal_child("commaopt",$1);};
+VariableInitializersopt: {$$=fterminal_child("VariableInitializersopt","");}| VariableInitializers{$$=fnon_terminalchild("VariableInitializersopt",$1);};
+
+VariableInitializers:
+
+	VariableInitializer{$$=fnon_terminalchild("VariableInitializers",$1);}|
+
+	VariableInitializers comma VariableInitializer{$$=fnon_terminalchild("VariableInitializers",$1);terminal_child($$,"VariableInitializers",$2);non_terminalchild($$,"VariableInitializers",$3);};
+
+Block:
+
+	open_flower_bracket BlockStatementsopt closed_flower_bracket{$$=fterminal_child("Block",$1);non_terminalchild($$,"Block",$2);terminal_child($$,"Block",$3);};
+
+BlockStatements:
+
+	BlockStatement{$$=fnon_terminalchild("BlockStatements",$1);}|
+
+	BlockStatements BlockStatement{$$=fnon_terminalchild("BlockStatements",$1);non_terminalchild($$,"BlockStatements",$2);};
+
+BlockStatement:
+
+	LocalVariableDeclarationStatement{$$=fnon_terminalchild("BlockStatement",$1);}|
+
+	Statement{$$=fnon_terminalchild("BlockStatement",$1);};
+
+LocalVariableDeclarationStatement:
+
+	LocalVariableDeclaration{$$=fnon_terminalchild("LocalVariableDeclarationStatement",$1);} ;
+
+LocalVariableDeclaration:
+
+	Type VariableDeclarators{$$=fnon_terminalchild("LocalVariableDeclaration",$1);non_terminalchild($$,"LocalVariableDeclaration",$2);}|
+	VariableDeclarators{$$=fnon_terminalchild("LocalVariableDeclaration",$1);};
+
+Statement:
+
+	StatementWithoutTrailingSubstatement{$$=fnon_terminalchild("Statement",$1);}|
+
+	LabeledStatement{$$=fnon_terminalchild("Statement",$1);}|
+
+	IfThenStatement{$$=fnon_terminalchild("Statement",$1);}|
+
+	IfThenElseStatement{$$=fnon_terminalchild("Statement",$1);}|
+
+	WhileStatement{$$=fnon_terminalchild("Statement",$1);}|
+
+	ForStatement{$$=fnon_terminalchild("Statement",$1);};
+
+StatementNoShortIf:
+
+	StatementWithoutTrailingSubstatement{$$=fnon_terminalchild("StatementNoShortIf",$1);}|
+
+	LabeledStatementNoShortIf{$$=fnon_terminalchild("StatementNoShortIf",$1);}|
+
+	IfThenElseStatementNoShortIf{$$=fnon_terminalchild("StatementNoShortIf",$1);}|
+
+	WhileStatementNoShortIf{$$=fnon_terminalchild("StatementNoShortIf",$1);}|
+
+	ForStatementNoShortIf{$$=fnon_terminalchild("StatementNoShortIf",$1);};
+
+StatementWithoutTrailingSubstatement:
+
+	Block{$$=fnon_terminalchild("StatementWithoutTrailingSubstatement",$1);}|
+
+	EmptyStatement{$$=fnon_terminalchild("StatementWithoutTrailingSubstatement",$1);}|
+
+	ExpressionStatement{$$=fnon_terminalchild("StatementWithoutTrailingSubstatement",$1);}|
+
+	SwitchStatement{$$=fnon_terminalchild("StatementWithoutTrailingSubstatement",$1);}|
+
+	DoStatement{$$=fnon_terminalchild("StatementWithoutTrailingSubstatement",$1);}|
+
+	BreakStatement{$$=fnon_terminalchild("StatementWithoutTrailingSubstatement",$1);}|
+
+	ContinueStatement{$$=fnon_terminalchild("StatementWithoutTrailingSubstatement",$1);}|
+
+	ReturnStatement{$$=fnon_terminalchild("StatementWithoutTrailingSubstatement",$1);}|
+
+	SynchronizedStatement{$$=fnon_terminalchild("StatementWithoutTrailingSubstatement",$1);}|
+
+	ThrowStatement{$$=fnon_terminalchild("StatementWithoutTrailingSubstatement",$1);}|
+
+	TryStatement{$$=fnon_terminalchild("StatementWithoutTrailingSubstatement",$1);};
+
+EmptyStatement:
+
+	semicolon{$$=fterminal_child("EmptyStatement",$1);};
+
+LabeledStatement:
+
+	Identifier colon Statement{$$=fnon_terminalchild("LabeledStatement",$1);terminal_child($$,"LabeledStatement",$2);non_terminalchild($$,"LabeledStatement",$3);};
+
+LabeledStatementNoShortIf:
+
+	Identifier colon StatementNoShortIf{$$=fnon_terminalchild("LabeledStatementNoShortIf",$1);terminal_child($$,"LabeledStatementNoShortIf",$2);non_terminalchild($$,"LabeledStatementNoShortIf",$3);};
+
+ExpressionStatement:
+
+	StatementExpression semicolon{$$=fnon_terminalchild("ExpressionStatement",$1);terminal_child($$,"ExpressionStatement",$2);};
+
+StatementExpression:
+
+	Assignment{$$=fnon_terminalchild("StatementExpression",$1);}|
+
+	PreIncrementExpression{$$=fnon_terminalchild("StatementExpression",$1);}|
+
+	PreDecrementExpression{$$=fnon_terminalchild("StatementExpression",$1);}|
+
+	PostIncrementExpression{$$=fnon_terminalchild("StatementExpression",$1);}|
+
+	PostDecrementExpression{$$=fnon_terminalchild("StatementExpression",$1);}|
+
+	MethodInvocation{$$=fnon_terminalchild("StatementExpression",$1);}|
+
+	ClassInstanceCreationExpression{$$=fnon_terminalchild("StatementExpression",$1);};
+
+IfThenStatement:
+
+	if1 open_bracket AssignmentExpression closed_bracket Statement{$$=fterminal_child("IfThenStatement",$1);terminal_child($$,"IfThenStatement",$2);non_terminalchild($$,"IfThenStatement",$3);terminal_child($$,"IfThenStatement",$4);non_terminalchild($$,"IfThenStatement",$5);};
+
+IfThenElseStatement:
+
+	if1 open_bracket AssignmentExpression closed_bracket StatementNoShortIf else1 Statement{$$=fterminal_child("IfThenElseStatement",$1);terminal_child($$,"IfThenElseStatement",$2);non_terminalchild($$,"IfThenElseStatement",$3);terminal_child($$,"IfThenElseStatement",$4);non_terminalchild($$,"IfThenElseStatement",$5);terminal_child($$,"IfThenElseStatement",$6);non_terminalchild($$,"IfThenElseStatement",$7);};
+
+IfThenElseStatementNoShortIf:
+
+	if1 open_bracket AssignmentExpression closed_bracket StatementNoShortIf else1 StatementNoShortIf{$$=fterminal_child("IfThenElseStatementNoShortIf",$1);terminal_child($$,"IfThenElseStatementNoShortIf",$2);non_terminalchild($$,"IfThenElseStatementNoShortIf",$3);terminal_child($$,"IfThenElseStatementNoShortIf",$4);non_terminalchild($$,"IfThenElseStatementNoShortIf",$5);terminal_child($$,"IfThenElseStatementNoShortIf",$6);non_terminalchild($$,"IfThenElseStatementNoShortIf",$7);};
+
+SwitchStatement:
+
+	switch1 open_bracket AssignmentExpression closed_bracket SwitchBlock{$$=fterminal_child("IfThenStatement",$1);terminal_child($$,"IfThenStatement",$2);non_terminalchild($$,"IfThenStatement",$3);terminal_child($$,"IfThenStatement",$4);non_terminalchild($$,"IfThenStatement",$5);};
+
+SwitchBlock:
+
+	open_flower_bracket SwitchBlockStatementGroupsopt SwitchLabelsopt closed_flower_bracket{$$=fterminal_child("SwitchBlock",$1);non_terminalchild($$,"SwitchBlock",$2);non_terminalchild($$,"SwitchBlock",$3);terminal_child($$,"SwitchBlock",$4);};
+
+SwitchBlockStatementGroupsopt: {$$=fterminal_child("SwitchBlockStatementGroupsopt","");}| SwitchBlockStatementGroups{$$=fnon_terminalchild("SwitchBlockStatementGroupsopt",$1);};
+SwitchLabelsopt: {$$=fterminal_child("SwitchLabelsopt","");}| SwitchLabels{$$=fnon_terminalchild("SwitchLabelsopt",$1);};
+
+SwitchBlockStatementGroups:
+
+	SwitchBlockStatementGroup{$$=fnon_terminalchild("SwitchBlockStatementGroups",$1);}|
+
+	SwitchBlockStatementGroups SwitchBlockStatementGroup{$$=fnon_terminalchild("SwitchBlockStatementGroups",$1);non_terminalchild($$,"SwitchBlockStatementGroups",$2);};
+
+SwitchBlockStatementGroup:
+
+	SwitchLabels BlockStatements{$$=fnon_terminalchild("SwitchBlockStatementGroup",$1);non_terminalchild($$,"SwitchBlockStatementGroup",$2);};
+
+SwitchLabels:
+
+	SwitchLabel{$$=fnon_terminalchild("SwitchLabels",$1);}|
+
+	SwitchLabels SwitchLabel{$$=fnon_terminalchild("SwitchLabels",$1);non_terminalchild($$,"SwitchLabels",$2);};
+
+SwitchLabel:
+
+	case1 AssignmentExpression colon{$$=fterminal_child("SwitchLabel",$1);non_terminalchild($$,"SwitchLabel",$2);terminal_child($$,"SwitchLabel",$3);}|
+
+	default1 colon{$$=fterminal_child("SwitchLabel",$1);terminal_child($$,"SwitchLabel",$2);};
+
+WhileStatement:
+
+	while1 open_bracket AssignmentExpression closed_bracket Statement{$$=fterminal_child("WhileStatement",$1);terminal_child($$,"WhileStatement",$2);non_terminalchild($$,"WhileStatement",$3);terminal_child($$,"WhileStatement",$4);non_terminalchild($$,"WhileStatement",$5);};
+
+WhileStatementNoShortIf:
+
+	while1 open_bracket AssignmentExpression closed_bracket StatementNoShortIf{$$=fterminal_child("WhileStatementNoShortIf",$1);terminal_child($$,"WhileStatementNoShortIf",$2);non_terminalchild($$,"WhileStatementNShortIf",$3);terminal_child($$,"WhileStatementNoShortIf",$4);non_terminalchild($$,"WhileStatementNoShortIf",$5);};
+
+DoStatement:
+
+	do1 Statement while1 open_bracket AssignmentExpression closed_bracket semicolon{$$=fterminal_child("DoStatement",$1);non_terminalchild($$,"DoStatement",$2);terminal_child($$,"DoStatement",$3);terminal_child($$,"DoStatement",$4);non_terminalchild($$,"DoStatement",$5);terminal_child($$,"DoStatement",$6);terminal_child($$,"DoStatement",$7);};
+
+ForStatement:
+
+	for1 open_bracket ForInitopt semicolon Expressionopt semicolon ForUpdateopt closed_bracket Statement{$$=fterminal_child("ForStatement",$1);terminal_child($$,"ForStatement",$2);non_terminalchild($$,"ForStatement",$3);terminal_child($$,"ForStatement",$4);non_terminalchild($$,"ForStatement",$5);terminal_child($$,"ForStatement",$6);non_terminalchild($$,"ForStatement",$7);terminal_child($$,"ForStatement",$8);non_terminalchild($$,"ForStatement",$9);};
+
+ForStatementNoShortIf:
+
+	for1 open_bracket ForInitopt semicolon Expressionopt semicolon ForUpdateopt closed_bracket StatementNoShortIf{$$=fterminal_child("ForStatementNoShortIf",$1);terminal_child($$,"ForStatementNoShortIf",$2);non_terminalchild($$,"ForStatementNoShortIf",$3);terminal_child($$,"ForStatementNoShortIf",$4);non_terminalchild($$,"ForStatementNoShortIf",$5);terminal_child($$,"ForStatementNoShortIf",$6);non_terminalchild($$,"ForStatementNoShortIf",$7);terminal_child($$,"ForStatementNoShortIf",$8);non_terminalchild($$,"ForStatementNoShortIf",$9);};
+
+ForInitopt: {$$=fterminal_child("ForInitopt","");}| ForInit{$$=fnon_terminalchild("ForInitopt",$1);};
+Expressionopt: {$$=fterminal_child("Expressionopt","");}| AssignmentExpression{$$=fnon_terminalchild("Expressionopt",$1);};
+ForUpdateopt: {$$=fterminal_child("ForUpdateopt","");}| ForUpdate{$$=fnon_terminalchild("ForUpdateopt",$1);};
+
+ForInit:
+
+	StatementExpressionList{$$=fnon_terminalchild("ForInit",$1);}|
+
+	LocalVariableDeclaration{$$=fnon_terminalchild("ForInit",$1);};
+
+ForUpdate:
+
+	StatementExpressionList{$$=fnon_terminalchild("ForUpdate",$1);};
+
+StatementExpressionList:
+
+	StatementExpression{$$=fnon_terminalchild("StatementExpressionList",$1);}|
+
+	StatementExpressionList comma StatementExpression{$$=fnon_terminalchild("StatementExpressionList",$1);terminal_child($$,"StatementExpressionList",$2);non_terminalchild($$,"StatementExpressionList",$3);};
+
+BreakStatement:
+
+	break1 Identifieropt semicolon{$$=fterminal_child("BreakStatement",$1);non_terminalchild($$,"BreakStatement",$2);terminal_child($$,"BreakStatement",$3);};
+
+ContinueStatement:
+
+	continue1 Identifieropt semicolon{$$=fterminal_child("ContinueStatement",$1);non_terminalchild($$,"ContinueStatement",$2);terminal_child($$,"ContinueStatement",$3);};
+
+Identifieropt: {$$=fterminal_child("Identifieropt","");}| Identifier{$$=fnon_terminalchild("Identifieropt",$1);};
+
+ReturnStatement:
+
+	return1 Expressionopt semicolon{$$=fterminal_child("ReturnStatement",$1);non_terminalchild($$,"ReturnStatement",$2);terminal_child($$,"ReturnStatement",$3);};
+
+ThrowStatement:
+
+	throw1 AssignmentExpression semicolon{$$=fterminal_child("ThrowStatement",$1);non_terminalchild($$,"ThrowStatement",$2);terminal_child($$,"ThrowStatement",$3);};
+
+SynchronizedStatement:
+
+	synchronised open_bracket AssignmentExpression closed_bracket Block{$$=fterminal_child("SynchronizedStatement",$1);terminal_child($$,"SynchronizedStatement",$2);non_terminalchild($$,"SynchronizedStatement",$3);terminal_child($$,"SynchronizedStatement",$4);non_terminalchild($$,"SynchronizedStatement",$5);};
+
+TryStatement:
+
+	try1 Block Catches{$$=fterminal_child("TryStatement",$1);non_terminalchild($$,"TryStatement",$2);non_terminalchild($$,"TryStatement",$3);}|
+
+	try1 Block Catchesopt Finally{$$=fterminal_child("TryStatement",$1);non_terminalchild($$,"TryStatement",$2);non_terminalchild($$,"TryStatement",$3);non_terminalchild($$,"TryStatement",$4);};
+
+Catchesopt: {$$=fterminal_child("Catchesopt","");}| Catches{$$=fnon_terminalchild("Catchesopt",$1);};
+
+Catches:
+
+	CatchClause{$$=fnon_terminalchild("Catches",$1);}|
+
+	Catches CatchClause{$$=fnon_terminalchild("Catches",$1);non_terminalchild($$,"Catches",$2);};
+
+CatchClause:
+
+	catch1 open_bracket FormalParameter closed_bracket Block{$$=fterminal_child("CatchClause",$1);terminal_child($$,"CatchClause",$2);non_terminalchild($$,"CatchClause",$3);terminal_child($$,"CatchClause",$4);};
+
+Finally:
+
+	finally Block{$$=fterminal_child("Finally",$1);non_terminalchild($$,"Finally",$2);};
+
+Primary:
+
+	PrimaryNoNewArray{$$=fnon_terminalchild("Primary",$1);}|
+
+	ArrayCreationExpression{$$=fnon_terminalchild("Primary",$1);};
+
+PrimaryNoNewArray:
+
+	Literal{$$=fnon_terminalchild("PrimaryNoArray",$1);}|
+
+	this1{$$=fterminal_child("PrimaryNoArray",$1);}|
+
+	open_bracket AssignmentExpression closed_bracket{$$=fterminal_child("PrimaryNoArray",$1);non_terminalchild($$,"PrimaryNoArray",$2);terminal_child($$,"PrimaryNoArray",$3);}|
+
+	ClassInstanceCreationExpression{$$=fnon_terminalchild("PrimaryNoArray",$1);}|
+
+	FieldAccess{$$=fnon_terminalchild("PrimaryNoArray",$1);}|
+
+	MethodInvocation{$$=fnon_terminalchild("PrimaryNoArray",$1);}|
+
+	ArrayAccess{$$=fnon_terminalchild("PrimaryNoArray",$1);};
+
+ClassInstanceCreationExpression:
+
+	new1 Name open_bracket ArgumentListopt closed_bracket{$$=fterminal_child("ClassInstanceCreationExpression",$1);non_terminalchild($$,"ClassInstanceCreationExpression",$2);terminal_child($$,"ClassInstanceCreationExpression",$3);non_terminalchild($$,"ClassInstanceCreationExpression",$4);terminal_child($$,"ClassInstanceCreationExpression",$5);};
+
+ArgumentList:
+
+	AssignmentExpression{$$=fnon_terminalchild("ArgumentList",$1);}|
+
+	ArgumentList comma AssignmentExpression{$$=fnon_terminalchild("ArgumentList",$1);terminal_child($$,"ArgumentList",$2);non_terminalchild($$,"ArgumentList",$3);};
+
+ArrayCreationExpression:
+
+	new1 PrimitiveType DimExprs Dimsopt{$$=fterminal_child("ArrayCreationExpression",$1);non_terminalchild($$,"ArrayCreationExpression",$2);non_terminalchild($$,"ArrayCreationExpression",$3);non_terminalchild($$,"ArrayCreationExpression",$4);}|
+
+	new1 Name DimExprs Dimsopt{$$=fterminal_child("ArrayCreationExpression",$1);non_terminalchild($$,"ArrayCreationExpression",$2);non_terminalchild($$,"ArrayCreationExpression",$3);non_terminalchild($$,"ArrayCreationExpression",$4);};
+
+Dimsopt: {$$=fterminal_child("Dimsopt","");}| Dims{$$=fnon_terminalchild("Dimsopt",$1);};
+
+DimExprs:
+
+	DimExpr{$$=fnon_terminalchild("DimExprs",$1);}|
+
+	DimExprs DimExpr{$$=fnon_terminalchild("DimExprs",$1);non_terminalchild($$,"DimExprs",$2);};
+
+DimExpr:
+
+	open_square_bracket AssignmentExpression closed_square_bracket{$$=fterminal_child("DimExpr",$1);non_terminalchild($$,"DimExpr",$2);terminal_child($$,"DimExpr",$3);};
+
+Dims:
+
+	open_square_bracket closed_square_bracket{$$=fterminal_child("Dims",$1);terminal_child($$,"Dims",$2);}|
+
+	Dims open_square_bracket closed_square_bracket{$$=fnon_terminalchild("Dims",$1);terminal_child($$,"Dims",$2);terminal_child($$,"Dims",$3);};
+
+FieldAccess:
+
+	Primary period Identifier{$$=fnon_terminalchild("FieldAccess",$1);terminal_child($$,"FieldAccess",$2);non_terminalchild($$,"FieldAccess",$3);}|
+
+	super period Identifier{$$=fterminal_child("FieldAccess",$1);terminal_child($$,"Dims",$2);non_terminalchild($$,"FieldAccess",$3);};
+
+MethodInvocation:
+
+	Name open_bracket ArgumentListopt closed_bracket{$$=fnon_terminalchild("MethodInvocation",$1);terminal_child($$,"MethodInvocation",$2);non_terminalchild($$,"MethodInvocation",$3);terminal_child($$,"MethodInvocation",$4);}|
+
+	Primary period Identifier open_bracket ArgumentListopt closed_bracket{$$=fnon_terminalchild("MethodInvocation",$1);terminal_child($$,"MethodInvocation",$2);non_terminalchild($$,"MethodInvocation",$3);terminal_child($$,"MethodInvocation",$4);non_terminalchild($$,"MethodInvocation",$5);terminal_child($$,"MethodInvocation",$6);}|
+
+	super period Identifier open_bracket ArgumentListopt closed_bracket{$$=fterminal_child("MethodInvocation",$1);terminal_child($$,"MethodInvocation",$2);non_terminalchild($$,"MethodInvocation",$3);terminal_child($$,"MethodInvocation",$4);non_terminalchild($$,"MethodInvocation",$5);terminal_child($$,"MethodInvocation",$6);};
+
+ArrayAccess:
+
+	Name open_square_bracket AssignmentExpression closed_square_bracket{$$=fnon_terminalchild("ArrayAccess",$1);terminal_child($$,"ArrayAccess",$2);non_terminalchild($$,"ArrayAccess",$3);terminal_child($$,"ArrayAccess",$4);}|
+
+	PrimaryNoNewArray open_square_bracket AssignmentExpression closed_square_bracket{$$=fnon_terminalchild("ArrayAccess",$1);terminal_child($$,"ArrayAccess",$2);non_terminalchild($$,"ArrayAccess",$3);terminal_child($$,"ArrayAccess",$4);};
+
+PostfixExpression:
+
+	Primary{$$=fnon_terminalchild("PostfixExpression",$1);}|
+
+	Name{$$=fnon_terminalchild("PostfixExpression",$1);}|
+
+	PostIncrementExpression{$$=fnon_terminalchild("PostfixExpression",$1);}|
+
+	PostDecrementExpression{$$=fnon_terminalchild("PostfixExpression",$1);};
+
+PostIncrementExpression:
+
+	PostfixExpression increment{$$=fnon_terminalchild("PostIncrementExpression",$1);terminal_child($$,"PostIncrementExpression",$2);};
+
+PostDecrementExpression:
+
+	PostfixExpression decrement{$$=fnon_terminalchild("PostDecrementExpression",$1);terminal_child($$,"PostDecrementExpression",$2);};
+
+UnaryExpression:
+
+	PreIncrementExpression{$$=fnon_terminalchild("UnaryExpression",$1);}|
+
+	PreDecrementExpression{$$=fnon_terminalchild("UnaryExpression",$1);}|
+
+	plus_1 UnaryExpression{$$=fterminal_child("UnaryExpression",$1);non_terminalchild($$,"UnaryExpression",$2);}|
+
+	minus_1 UnaryExpression{$$=fterminal_child("UnaryExpression",$1);non_terminalchild($$,"PostfixExpression",$2);}|
+
+	UnaryExpressionNotPlusMinus{$$=fnon_terminalchild("UnaryExpression",$1);};
+
+PreIncrementExpression:
+
+	increment UnaryExpression{$$=fterminal_child("PreIncrementExpression",$1);non_terminalchild($$,"PreIncrementExpression",$2);};
+
+PreDecrementExpression:
+
+	decrement UnaryExpression{$$=fterminal_child("PreDecrementExpression",$1);non_terminalchild($$,"PreDecrementExpression",$2);};
+
+UnaryExpressionNotPlusMinus:
+
+	PostfixExpression{$$=fnon_terminalchild("UnaryExpressionNotPlusMinus",$1);}|
+
+	notk UnaryExpression{$$=fterminal_child("UnaryExpressionNotPlusMinus",$1);non_terminalchild($$,"UnaryExpressionNotPlusMinus",$2);}|
+
+	exclamatory UnaryExpression{$$=fterminal_child("UnaryExpressionNotPlusMinus",$1);non_terminalchild($$,"UnaryExpressionNotPlusMinus",$2);}|
+
+	CastExpression{$$=fnon_terminalchild("UnaryExpressionNotPlusMinus",$1);};
+
+CastExpression:
+
+	open_bracket PrimitiveType Dimsopt closed_bracket UnaryExpression{$$=fterminal_child("CastExpression",$1);non_terminalchild($$,"CastExpression",$2);non_terminalchild($$,"CastExpression",$3);terminal_child($$,"CastExpression",$4);non_terminalchild($$,"CastExpression",$5);}|
+
+	open_bracket AssignmentExpression closed_bracket UnaryExpressionNotPlusMinus{$$=fterminal_child("CastExpression",$1);non_terminalchild($$,"CastExpression",$2);terminal_child($$,"CastExpression",$3);non_terminalchild($$,"CastExpression",$4);}|
+
+	open_bracket Name Dims closed_bracket UnaryExpressionNotPlusMinus{$$=fterminal_child("CastExpression",$1);non_terminalchild($$,"CastExpression",$2);non_terminalchild($$,"CastExpression",$3);terminal_child($$,"CastExpression",$4);non_terminalchild($$,"CastExpression",$5);};
+
+MultiplicativeExpression:
+
+	UnaryExpression{$$=fnon_terminalchild("MultiplicativeExpression",$1);}|
+
+	MultiplicativeExpression multiply UnaryExpression{$$=nonopnon( "MultiplicativeExpression",$2,$1,$3);}|
+
+	MultiplicativeExpression divide UnaryExpression{$$=nonopnon( "MultiplicativeExpression",$2,$1,$3);}|
+
+	MultiplicativeExpression percentage UnaryExpression{$$=nonopnon( "MultiplicativeExpression",$2,$1,$3);};
+
+AdditiveExpression:
+
+	MultiplicativeExpression{$$=fnon_terminalchild("AdditiveExpression",$1);}|
+
+	AdditiveExpression plus_1 MultiplicativeExpression{$$=nonopnon( "AdditiveExpression",$2,$1,$3);}|
+
+	AdditiveExpression minus_1 MultiplicativeExpression{$$=nonopnon( "AdditiveExpression",$2,$1,$3);};
+
+ShiftExpression:
+
+	AdditiveExpression{$$=fnon_terminalchild("ShiftExpression",$1);}|
+
+	ShiftExpression llthan AdditiveExpression{$$=nonopnon( "ShiftExpression",$2,$1,$3);}|
+
+	ShiftExpression ggthan AdditiveExpression{$$=nonopnon( "ShiftExpression",$2,$1,$3);}|
+
+	ShiftExpression gggthan AdditiveExpression{$$=nonopnon( "ShiftExpression",$2,$1,$3);};
+
+RelationalExpression:
+
+	ShiftExpression{$$=fnon_terminalchild("RelationalExpression",$1);}|
+
+	RelationalExpression lthan ShiftExpression{$$=nonopnon( "RelationalExpression",$2,$1,$3);}|
+
+	RelationalExpression gthan ShiftExpression{$$=nonopnon( "RelationalExpression",$2,$1,$3);}|
+
+	RelationalExpression l_equal ShiftExpression{$$=nonopnon( "RelationalExpression",$2,$1,$3);}|
+
+	RelationalExpression g_equal ShiftExpression{$$=nonopnon( "RelationalExpression",$2,$1,$3);}|
+
+	RelationalExpression instanceof ReferenceType{$$=fnon_terminalchild("RelationalExpression",$1);terminal_child($$,"RelationalExpression",$2);non_terminalchild($$,"RelationalExpression",$3);};
+
+EqualityExpression:
+
+	RelationalExpression{$$=fnon_terminalchild("EqualityExpression",$1);}|
+
+	EqualityExpression equal_equal RelationalExpression{$$=nonopnon( "EqualityExpression",$2,$1,$3);}|
+
+	EqualityExpression exclamatory_equal RelationalExpression{$$=nonopnon( "EqualityExpression",$2,$1,$3);};
+
+AndExpression:
+
+	EqualityExpression{$$=fnon_terminalchild("AndExpression",$1);}|
+
+	AndExpression band EqualityExpression{$$=nonopnon( "AndExpression",$2,$1,$3);};
+
+ExclusiveOrExpression:
+
+	AndExpression{$$=fnon_terminalchild("ExclusiveOrExpression",$1);}|
+
+	ExclusiveOrExpression power AndExpression{$$=nonopnon( "ExclusiveOrExpression",$2,$1,$3);};
+
+InclusiveOrExpression:
+
+	ExclusiveOrExpression{$$=fnon_terminalchild("InclusiveOrExpression",$1);}|
+
+	InclusiveOrExpression bor ExclusiveOrExpression{$$=nonopnon( "InclusiveOrExpression",$2,$1,$3);};
+
+ConditionalAndExpression:
+
+	InclusiveOrExpression{$$=fnon_terminalchild("ConditionalAndExpression",$1);}|
+
+	ConditionalAndExpression and_and InclusiveOrExpression{$$=nonopnon( "ConditionalAndExpression",$2,$1,$3);};
+
+ConditionalOrExpression:
+
+	ConditionalAndExpression{$$=fnon_terminalchild("ConditionalOrExpression",$1);}|
+
+	ConditionalOrExpression or1 ConditionalAndExpression{$$=nonopnon( "ConditionalOrExpression",$2,$1,$3);};
+
+AssignmentExpression:
+
+	ConditionalOrExpression{$$=fnon_terminalchild("AssignmentExpression",$1);}|
+
+	Assignment{$$=fnon_terminalchild("AssignmentExpression",$1);};
+
+Assignment:
+
+	LeftHandSide AssignmentOperator AssignmentExpression{$$=fnon_terminalchild("Assignment",$1);non_terminalchild($$,"Assignment",$2);non_terminalchild($$,"Assignment",$3);};
+
+LeftHandSide:
+
+	Name open_flower_bracket closed_flower_bracket{$$=fnon_terminalchild("LeftHandSide",$1);terminal_child($$,"LeftHandSide",$2);terminal_child($$,"LeftHandSide",$3);}|
+
+	FieldAccess{$$=fnon_terminalchild("LeftHandSide",$1);}|
+
+	ArrayAccess{$$=fnon_terminalchild("LeftHandSide",$1);};
+
+AssignmentOperator: 
+
+	equal1{$$=fterminal_child("AssignmentOperator",$1);}| 
+    multiply_equal{$$=fterminal_child("AssignmentOperator",$1);}| 
+    divide_equal{$$=fterminal_child("AssignmentOperator",$1);}| 
+    percentage_equal{$$=fterminal_child("AssignmentOperator",$1);}| 
+    plus_equal{$$=fterminal_child("AssignmentOperator",$1);}| 
+    minus_equal{$$=fterminal_child("AssignmentOperator",$1);} | 
+    ll_equal{$$=fterminal_child("AssignmentOperator",$1);}| 
+    gg_equal{$$=fterminal_child("AssignmentOperator",$1);}| 
+    ggg_equal{$$=fterminal_child("AssignmentOperator",$1);}| 
+    power_equal{$$=fterminal_child("AssignmentOperator",$1);}| bitand_equal{$$=fterminal_child("AssignmentOperator",$1);}| bitor_equal{$$=fterminal_child("AssignmentOperator",$1);};
+
+
+%%
+
+int main(int argc, char** argv)
+{
+  yyparse();
+  string filename = "graph.dot";
+  std::ofstream ofs;
+ofs.open(filename, std::ofstream::out | std::ofstream::trunc);
+ofs.close();
+  print_graph_in_dot(root, filename);
+
+  return 0;
+}
+void yyerror(char const * message)
+{
+    cout<<endl<<" Entered code is invalid, unable to parse" << yylineno <<endl;
+}
